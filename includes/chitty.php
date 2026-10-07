@@ -190,10 +190,10 @@ function settle_auction(int $scheme_id, int $month_number, string $auction_date,
     $scheme = get_scheme($scheme_id);
     if (!$scheme) throw new RuntimeException('Scheme not found');
     if (!is_scheme_fully_enrolled($scheme_id)) {
-        throw new RuntimeException('All scheme tickets must be enrolled before an auction can be recorded.');
+        throw new RuntimeException('All scheme Chittals must be enrolled before an auction can be recorded.');
     }
     if (!$winning_subscription_id) {
-        throw new RuntimeException('Select the winning ticket before saving the auction result.');
+        throw new RuntimeException('Select the winning Chittal N0. before saving the auction result.');
     }
 
     $commission_amount = round($scheme['chit_value'] * ($scheme['commission_percent'] / 100), 2);
@@ -213,11 +213,11 @@ function settle_auction(int $scheme_id, int $month_number, string $auction_date,
         $stmt->execute([$winning_subscription_id, $scheme_id]);
         $winner = $stmt->fetch();
         if (!$winner) {
-            throw new RuntimeException('Select a valid ticket from this chit scheme as the winner.');
+            throw new RuntimeException('Select a valid Chittal N0. from this chit scheme as the winner.');
         }
         $isCurrentWinner = $existing && (int) $existing['winning_subscription_id'] === $winning_subscription_id;
         if ($winner['has_won'] && !$isCurrentWinner) {
-            throw new RuntimeException('That ticket has already won an auction and cannot be selected again.');
+            throw new RuntimeException('That Chittal N0. has already won an auction and cannot be selected again.');
         }
 
         if ($existing) {
@@ -352,3 +352,31 @@ function scheme_summary(int $scheme_id): array {
         'auctionsHeld' => $auctionsHeld,
     ];
 }
+
+function get_user_total_due(int $user_id): float {
+    $stmt = db()->prepare('
+        SELECT COALESCE(SUM(GREATEST(i.amount_due - i.amount_paid, 0)), 0) AS total_due
+        FROM subscriptions s
+        JOIN installments i ON i.subscription_id = s.id
+        WHERE s.user_id = ?
+    ');
+    $stmt->execute([$user_id]);
+    return round((float) $stmt->fetchColumn(), 2);
+}
+
+function get_user_due_breakdown(int $user_id): array {
+    $stmt = db()->prepare('
+        SELECT cs.id AS scheme_id, cs.name AS scheme_name, s.ticket_number,
+               COALESCE(SUM(GREATEST(i.amount_due - i.amount_paid, 0)), 0) AS ticket_due,
+               COUNT(CASE WHEN i.status != "paid" AND i.id IS NOT NULL THEN 1 END) AS pending_months
+        FROM subscriptions s
+        JOIN chit_schemes cs ON cs.id = s.scheme_id
+        LEFT JOIN installments i ON i.subscription_id = s.id
+        WHERE s.user_id = ?
+        GROUP BY cs.id, cs.name, s.id, s.ticket_number
+        ORDER BY cs.name, s.ticket_number
+    ');
+    $stmt->execute([$user_id]);
+    return $stmt->fetchAll();
+}
+

@@ -41,13 +41,13 @@ require_once __DIR__ . '/../includes/header.php';
   <?php if (empty($summaries)): ?>
     <div class="empty">No chit schemes yet. Start by creating one.</div>
   <?php else: ?>
-    <table>
+    <table class="responsive-card-table admin-schemes-table">
       <thead>
         <tr>
           <th>Scheme</th>
           <th class="num">Chit value</th>
           <th class="num">Duration</th>
-          <th class="num">Tickets filled</th>
+          <th class="num">Chittals filled</th>
           <th class="num">Collected</th>
           <th class="num">Outstanding</th>
           <th>Status</th>
@@ -56,13 +56,13 @@ require_once __DIR__ . '/../includes/header.php';
       <tbody>
         <?php foreach ($summaries as $s): ?>
           <tr>
-            <td><a href="/admin/scheme.php?id=<?= (int)$s['scheme']['id'] ?>"><?= h($s['scheme']['name']) ?></a></td>
-            <td class="num">₹<?= money($s['scheme']['chit_value']) ?></td>
-            <td class="num"><?= (int)$s['scheme']['duration_months'] ?> mo</td>
-            <td class="num"><?= $s['totalTickets'] ?> / <?= (int)$s['scheme']['duration_months'] ?></td>
-            <td class="num">₹<?= money($s['collected']) ?></td>
-            <td class="num">₹<?= money($s['outstanding']) ?></td>
-            <td>
+            <td data-label="Scheme"><a href="/admin/scheme.php?id=<?= (int)$s['scheme']['id'] ?>"><?= h($s['scheme']['name']) ?></a></td>
+            <td class="num font-mono" data-label="Chit value">₹<?= money($s['scheme']['chit_value']) ?></td>
+            <td class="num font-mono" data-label="Duration"><?= (int)$s['scheme']['duration_months'] ?> mo</td>
+            <td class="num font-mono" data-label="Chittals filled"><?= $s['totalTickets'] ?> / <?= (int)$s['scheme']['duration_months'] ?></td>
+            <td class="num font-mono" data-label="Collected">₹<?= money($s['collected']) ?></td>
+            <td class="num font-mono" data-label="Outstanding">₹<?= money($s['outstanding']) ?></td>
+            <td data-label="Status">
               <div class="scheme-status-actions">
                 <span class="badge <?= h($s['scheme']['status']) ?>"><?= h($s['scheme']['status']) ?></span>
                 <?php if ($s['scheme']['status'] === 'closed'): ?>

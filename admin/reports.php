@@ -15,7 +15,7 @@ $title = 'Reports';
 require_once __DIR__ . '/../includes/header.php';
 ?>
   <div class="page-head">
-    <div><h1><?= h($scheme['name']) ?> — Ledger</h1><div class="sub">Full month-by-month record for every ticket</div></div>
+    <div><h1><?= h($scheme['name']) ?> — Ledger</h1><div class="sub">Full month-by-month record for every Chittal N0.</div></div>
     <a class="btn secondary" href="/admin/scheme.php?id=<?= $id ?>">Back to scheme</a>
   </div>
 
@@ -26,20 +26,20 @@ require_once __DIR__ . '/../includes/header.php';
   </div>
 
   <?php foreach ($ledgers as $entry): $sub = $entry['sub']; $ledger = $entry['ledger']; ?>
-    <h3>Ticket #<?= (int)$sub['ticket_number'] ?> — <?= h($sub['member_name']) ?><?= $sub['has_won'] ? ' (won month ' . (int)$sub['won_month'] . ')' : '' ?></h3>
+    <h3>Chittal N0. #<?= (int)$sub['ticket_number'] ?> — <?= h($sub['member_name']) ?><?= $sub['has_won'] ? ' (won month ' . (int)$sub['won_month'] . ')' : '' ?></h3>
     <?php if (empty($ledger)): ?>
-      <p class="empty">No installments recorded yet for this ticket.</p>
+      <p class="empty">No installments recorded yet for this Chittal N0.</p>
     <?php else: ?>
-      <table>
+      <table class="responsive-card-table reports-ledger-table">
         <thead><tr><th class="num">Month</th><th class="num">Due balance</th><th class="num">Paid</th><th>Status</th><th>Paid on</th></tr></thead>
         <tbody>
           <?php foreach ($ledger as $i): ?>
             <tr>
-              <td class="num">#<?= (int)$i['month_number'] ?></td>
-              <td class="num">₹<?= money(remaining_amount_due($i)) ?></td>
-              <td class="num">₹<?= money($i['amount_paid']) ?></td>
-              <td><span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span></td>
-              <td><?= h($i['paid_date'] ?: '—') ?></td>
+              <td class="num font-mono" data-label="Month">#<?= (int)$i['month_number'] ?></td>
+              <td class="num font-mono" data-label="Due balance">₹<?= money(remaining_amount_due($i)) ?></td>
+              <td class="num font-mono" data-label="Paid">₹<?= money($i['amount_paid']) ?></td>
+              <td data-label="Status"><span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span></td>
+              <td data-label="Paid on"><?= h($i['paid_date'] ?: '—') ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>

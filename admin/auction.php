@@ -58,7 +58,7 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="error-msg"><?= h($auctionError) ?></div>
     <?php endif; ?>
     <?php if (empty($eligible) && !$existing): ?>
-      <p class="section-note">Every ticket has already won. A winning ticket is required to record an auction result.</p>
+      <p class="section-note">Every Chittal N0. has already won. A winning Chittal N0. is required to record an auction result.</p>
     <?php endif; ?>
     <form method="POST" action="/admin/auction.php?id=<?= $id ?>&month=<?= $month_number ?>">
       <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
@@ -69,13 +69,13 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <div class="field">
           <label>Winning bid / discount (₹)</label>
-          <input type="number" step="1" name="bid_amount" value="<?= h($existing['bid_amount'] ?? 0) ?>" required>
+          <input type="number" step="1" inputmode="numeric" name="bid_amount" value="<?= h($existing['bid_amount'] ?? 0) ?>" required>
         </div>
       </div>
       <div class="field">
-        <label>Winning ticket</label>
+        <label>Winning Chittal N0.</label>
         <select name="winning_subscription_id" required>
-          <option value="" disabled <?= !$existing ? 'selected' : '' ?>>— Select winning ticket —</option>
+          <option value="" disabled <?= !$existing ? 'selected' : '' ?>>— Select winning Chittal N0. —</option>
           <?php foreach ($subs as $s): ?>
             <option value="<?= (int)$s['id'] ?>"
               <?= ($existing && (int)$existing['winning_subscription_id'] === (int)$s['id']) ? 'selected' : '' ?>
@@ -91,7 +91,7 @@ require_once __DIR__ . '/../includes/header.php';
       </div>
       <p class="section-note">
         Commission is <?= h($scheme['commission_percent']) ?>% of the chit value, taken from the winning bid.
-        What's left of the bid is split across all <?= (int)$scheme['duration_months'] ?> tickets and reduces
+        What's left of the bid is split across all <?= (int)$scheme['duration_months'] ?> Chittals and reduces
         everyone's installment for this month. This recalculates and overwrites this month's dues if
         you submit again.
       </p>
@@ -103,11 +103,11 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="card" style="max-width:560px">
       <h3>This month's settlement</h3>
       <table>
-        <tr><td>Winning ticket</td><td class="num">#<?= (int)$existing['winner_ticket'] ?> — <?= h($existing['winner_name']) ?></td></tr>
+        <tr><td>Winning Chittal N0.</td><td class="num">#<?= (int)$existing['winner_ticket'] ?> — <?= h($existing['winner_name']) ?></td></tr>
         <tr><td>Prize paid to winner</td><td class="num">₹<?= money($existing['prize_amount']) ?></td></tr>
         <tr><td>Society commission</td><td class="num">₹<?= money($existing['commission_amount']) ?></td></tr>
         <tr><td>Dividend pool shared</td><td class="num">₹<?= money($existing['dividend_pool']) ?></td></tr>
-        <tr><td>Dividend per ticket</td><td class="num">₹<?= money($existing['dividend_per_ticket']) ?></td></tr>
+        <tr><td>Dividend per Chittal N0.</td><td class="num">₹<?= money($existing['dividend_per_ticket']) ?></td></tr>
         <tr><td><strong>Net installment this month</strong></td><td class="num"><strong>₹<?= money($existing['net_installment']) ?></strong></td></tr>
       </table>
       <a class="btn small" href="/admin/month.php?id=<?= $id ?>&month=<?= $month_number ?>">View & collect this month's dues →</a>

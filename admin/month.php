@@ -36,7 +36,7 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="page-head">
     <div>
       <h1><?= h($scheme['name']) ?> — Month <?= $month_number ?> dues</h1>
-      <?php if ($auction): ?><div class="sub">Net installment: ₹<?= money($auction['net_installment']) ?> per ticket</div><?php endif; ?>
+      <?php if ($auction): ?><div class="sub">Net installment: ₹<?= money($auction['net_installment']) ?> per Chittal N0.</div><?php endif; ?>
     </div>
     <a class="btn secondary" href="/admin/auction.php?id=<?= $id ?>&month=<?= $month_number ?>">Edit auction</a>
   </div>
@@ -52,24 +52,24 @@ require_once __DIR__ . '/../includes/header.php';
   <?php elseif (empty($installments)): ?>
     <div class="empty">No installments generated. Save the auction form again to generate them.</div>
   <?php else: ?>
-    <table>
+    <table class="responsive-card-table admin-month-table">
       <thead>
-        <tr><th class="num">Ticket</th><th>Member</th><th class="num">Due balance</th><th class="num">Paid</th><th>Status</th><th>Record payment</th></tr>
+        <tr><th class="num">Chittal N0.</th><th>Member</th><th class="num">Due balance</th><th class="num">Paid</th><th>Status</th><th>Record payment</th></tr>
       </thead>
       <tbody>
         <?php foreach ($installments as $i): ?>
           <tr>
-            <td class="num">#<?= (int)$i['ticket_number'] ?></td>
-            <td><?= h($i['member_name']) ?></td>
-            <td class="num">₹<?= money(remaining_amount_due($i)) ?></td>
-            <td class="num">₹<?= money($i['amount_paid']) ?></td>
-            <td><span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span></td>
-            <td>
+            <td class="num font-mono" data-label="Chittal N0.">#<?= (int)$i['ticket_number'] ?></td>
+            <td data-label="Member"><?= h($i['member_name']) ?></td>
+            <td class="num font-mono" data-label="Due balance">₹<?= money(remaining_amount_due($i)) ?></td>
+            <td class="num font-mono" data-label="Paid">₹<?= money($i['amount_paid']) ?></td>
+            <td data-label="Status"><span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span></td>
+            <td data-label="Record payment">
               <?php if ($i['status'] !== 'paid'): ?>
                 <form class="inline" method="POST" action="/admin/month.php?id=<?= $id ?>&month=<?= $month_number ?>">
                   <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                   <input type="hidden" name="installment_id" value="<?= (int)$i['id'] ?>">
-                  <input type="number" step="0.01" min="0.01" max="<?= h(remaining_amount_due($i)) ?>" name="amount_paid" placeholder="₹" style="width:90px" required>
+                  <input type="number" step="0.01" min="0.01" max="<?= h(remaining_amount_due($i)) ?>" name="amount_paid" placeholder="₹" style="width:90px" inputmode="decimal" required>
                   <input type="date" name="paid_date" style="width:140px">
                   <button class="small" type="submit">Record</button>
                 </form>

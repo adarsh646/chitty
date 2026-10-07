@@ -26,9 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Sign in — Chitty Register</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=<?= filemtime(__DIR__ . '/css/style.css') ?>">
 </head>
 <body>
   <div class="login-wrap">
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <form method="POST" action="/login.php">
         <div class="field">
           <label for="phone">Phone number</label>
-          <input type="text" id="phone" name="phone" required autofocus>
+          <input type="tel" inputmode="tel" autocomplete="tel" id="phone" name="phone" required autofocus>
         </div>
         <div class="field">
           <label for="password">Password</label>

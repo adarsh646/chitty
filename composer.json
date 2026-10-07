@@ -1,0 +1,7 @@
+{
+    "require": {
+        "vlucas/phpdotenv": "^5.7",
+        "razorpay/razorpay": "^2.9",
+        "chillerlan/php-qrcode": "^6.0"
+    }
+}

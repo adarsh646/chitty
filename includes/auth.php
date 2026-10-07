@@ -78,6 +78,24 @@ function create_user(string $name, string $phone, ?string $email, ?string $addre
     return (int) db()->lastInsertId();
 }
 
+function update_user_password(int $id, string $newPassword): void {
+    $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+    $stmt = db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+    $stmt->execute([$hash, $id]);
+}
+
+function update_member_details(int $id, string $name, string $phone, ?string $email, ?string $address, ?string $password = null): void {
+    $pdo = db();
+    if ($password !== null && trim($password) !== '') {
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare('UPDATE users SET name = ?, phone = ?, email = ?, address = ?, password_hash = ? WHERE id = ? AND role = "member"');
+        $stmt->execute([$name, $phone, $email, $address, $hash, $id]);
+    } else {
+        $stmt = $pdo->prepare('UPDATE users SET name = ?, phone = ?, email = ?, address = ? WHERE id = ? AND role = "member"');
+        $stmt->execute([$name, $phone, $email, $address, $id]);
+    }
+}
+
 // A member with chit subscriptions cannot be removed: their subscriptions,
 // auctions, and installment records are part of the scheme's financial history.
 function delete_member(int $id): string {
