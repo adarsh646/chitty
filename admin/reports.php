@@ -31,14 +31,23 @@ require_once __DIR__ . '/../includes/header.php';
       <p class="empty">No installments recorded yet for this Chittal N0.</p>
     <?php else: ?>
       <table class="responsive-card-table reports-ledger-table">
-        <thead><tr><th class="num">Month</th><th class="num">Due balance</th><th class="num">Paid</th><th>Status</th><th>Paid on</th></tr></thead>
+        <thead><tr><th class="num">Month</th><th class="num">Due balance</th><th class="num">Excess amount</th><th class="num">Paid</th><th>Status</th><th>Paid on</th></tr></thead>
         <tbody>
           <?php foreach ($ledger as $i): ?>
             <tr>
               <td class="num font-mono" data-label="Month">#<?= (int)$i['month_number'] ?></td>
               <td class="num font-mono" data-label="Due balance">₹<?= money(remaining_amount_due($i)) ?></td>
+              <td class="num font-mono" data-label="Excess amount" style="<?= ($i['excess_amount'] ?? 0) > 0 ? 'color: var(--good); font-weight: 600;' : 'color: var(--ink-soft);' ?>">
+                ₹<?= money($i['excess_amount'] ?? 0) ?>
+              </td>
               <td class="num font-mono" data-label="Paid">₹<?= money($i['amount_paid']) ?></td>
-              <td data-label="Status"><span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span></td>
+              <td data-label="Status">
+                <?php if ($i['status'] === 'deducted_from_excess' || !empty($i['is_deducted_from_excess'])): ?>
+                  <span class="badge deducted_from_excess" title="Installment fully covered and deducted from excess amount">installment deducted from excess amount</span>
+                <?php else: ?>
+                  <span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span>
+                <?php endif; ?>
+              </td>
               <td data-label="Paid on"><?= h($i['paid_date'] ?: '—') ?></td>
             </tr>
           <?php endforeach; ?>

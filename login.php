@@ -1,10 +1,10 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+start_url_mask_buffer();
 
 $user = current_user();
 if ($user) {
-    header('Location: ' . ($user['role'] === 'admin' ? '/admin/index.php' : '/member/index.php'));
-    exit;
+    redirect_masked($user['role'] === 'admin' ? '/admin/index.php' : '/member/index.php');
 }
 
 $error = null;
@@ -17,8 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         start_app_session();
         $_SESSION['user'] = ['id' => $found['id'], 'name' => $found['name'], 'role' => $found['role'], 'phone' => $found['phone']];
-        header('Location: ' . ($found['role'] === 'admin' ? '/admin/index.php' : '/member/index.php'));
-        exit;
+        redirect_masked($found['role'] === 'admin' ? '/admin/index.php' : '/member/index.php');
     }
 }
 ?>
@@ -33,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="login-wrap">
     <div class="login-card">
-      <div class="brand">Chitty Register</div>
+      <div class="brand">MSS Chitty Register</div>
       <div class="brand-sub">Cooperative Society Chit Fund</div>
       <?php if ($error): ?><div class="error-msg"><?= h($error) ?></div><?php endif; ?>
       <form method="POST" action="/login.php">

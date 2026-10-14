@@ -5,8 +5,7 @@ require_once __DIR__ . '/includes/chitty.php';
 $sessionUser = require_login();
 $dbUser = find_user_by_id((int) $sessionUser['id']);
 if (!$dbUser) {
-    header('Location: /login.php');
-    exit;
+    redirect_masked('/login.php');
 }
 
 $error = null;

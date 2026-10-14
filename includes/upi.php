@@ -94,9 +94,6 @@ function submit_upi_payment(int $installment_id, int $user_id, string $transacti
     if ($amount < 1.00) {
         throw new RuntimeException('Payment amount must be at least ₹1.00.');
     }
-    if ($amount > $remaining + 0.005) {
-        throw new RuntimeException('Payment amount cannot exceed the due balance of ₹' . number_format($remaining, 2) . '.');
-    }
 
     $pdo = db();
 
@@ -122,7 +119,11 @@ function submit_upi_payment(int $installment_id, int $user_id, string $transacti
         throw new RuntimeException('This Transaction ID has already been submitted for another payment. Please verify your reference number.');
     }
 
-    $pdo->beginTransaction();
+    $openedTx = false;
+    if (!$pdo->inTransaction()) {
+        $pdo->beginTransaction();
+        $openedTx = true;
+    }
     try {
         // Insert into payments table
         $stmtPay = $pdo->prepare('
@@ -153,7 +154,17 @@ function submit_upi_payment(int $installment_id, int $user_id, string $transacti
         ]);
         $notificationId = (int) $pdo->lastInsertId();
 
-        $pdo->commit();
+        if ($openedTx && $pdo->inTransaction()) {
+            $pdo->commit();
+        }
+
+        // Send email notification to admin with one-click verification link
+        try {
+            require_once __DIR__ . '/mail.php';
+            send_upi_payment_admin_email($notificationId);
+        } catch (\Throwable $mailErr) {
+            error_log('Failed to dispatch payment notification email: ' . $mailErr->getMessage());
+        }
 
         return [
             'payment_id' => $paymentId,
@@ -163,7 +174,7 @@ function submit_upi_payment(int $installment_id, int $user_id, string $transacti
             'status' => 'under_processing',
         ];
     } catch (\Throwable $e) {
-        if ($pdo->inTransaction()) {
+        if ($openedTx && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
         throw $e;
@@ -192,7 +203,11 @@ function verify_upi_payment(int $notification_id, int $admin_id): array {
         throw new RuntimeException('This payment has already been verified.');
     }
 
-    $pdo->beginTransaction();
+    $openedTx = false;
+    if (!$pdo->inTransaction()) {
+        $pdo->beginTransaction();
+        $openedTx = true;
+    }
     try {
         // 1. Mark notification as verified
         $stmtUpNotif = $pdo->prepare('
@@ -209,7 +224,7 @@ function verify_upi_payment(int $notification_id, int $admin_id): array {
         $stmtUpPay = $pdo->prepare('
             UPDATE payments
             SET status = "captured"
-            WHERE id = ?
+        WHERE id = ?
         ');
         $stmtUpPay->execute([$notif['payment_id']]);
 
@@ -220,7 +235,9 @@ function verify_upi_payment(int $notification_id, int $admin_id): array {
             date('Y-m-d')
         );
 
-        $pdo->commit();
+        if ($openedTx && $pdo->inTransaction()) {
+            $pdo->commit();
+        }
 
         return [
             'notification_id' => $notification_id,
@@ -230,7 +247,7 @@ function verify_upi_payment(int $notification_id, int $admin_id): array {
             'installment' => $updatedInstallment,
         ];
     } catch (\Throwable $e) {
-        if ($pdo->inTransaction()) {
+        if ($openedTx && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
         throw $e;

@@ -3,7 +3,7 @@ require_once __DIR__ . '/auth.php';
 $currentUser = current_user();
 $pageTitle = $title ?? 'Chitty Register';
 
-$currentUri = $_SERVER['REQUEST_URI'] ?? '';
+$currentUri = $_SERVER['PAGE_URI'] ?? ($_SERVER['REQUEST_URI'] ?? '');
 $isAdmin = $currentUser && ($currentUser['role'] ?? '') === 'admin';
 $isSchemesActive = $isAdmin && (
     strpos($currentUri, '/admin/scheme') !== false ||
@@ -57,7 +57,7 @@ $pendingNotifCount = $isAdmin ? get_pending_notifications_count() : 0;
   <aside class="sidebar" id="appSidebar" aria-label="Main Navigation">
     <div class="sidebar-header">
       <div class="sidebar-brand-block">
-        <div class="brand">Chitty Register</div>
+        <div class="brand">MSS Chitty Register</div>
         <div class="brand-sub">Cooperative Society Chit Fund</div>
       </div>
       <button type="button" class="mobile-drawer-close" id="mobileDrawerClose" aria-label="Close menu">&times;</button>

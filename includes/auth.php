@@ -1,5 +1,18 @@
 <?php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/url.php';
+
+// Enforce URL masking for direct page visits (GET requests in browser)
+if (php_sapi_name() !== 'cli' && empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    if ($scriptName !== '/index.php' && !isset($_GET['p']) && !str_contains($scriptName, 'mail-badge')) {
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        if ($method === 'GET') {
+            $reqUri = $_SERVER['REQUEST_URI'] ?? $scriptName;
+            redirect_masked($reqUri);
+        }
+    }
+}
 
 function start_app_session(): void {
     if (session_status() === PHP_SESSION_NONE) {
@@ -32,8 +45,7 @@ function current_user(): ?array {
 function require_login(): array {
     $user = current_user();
     if (!$user) {
-        header('Location: /login.php');
-        exit;
+        redirect_masked('/login.php');
     }
     return $user;
 }
@@ -51,8 +63,7 @@ function require_admin(): array {
 function require_member(): array {
     $user = require_login();
     if ($user['role'] !== 'member') {
-        header('Location: /admin/index.php');
-        exit;
+        redirect_masked('/admin/index.php');
     }
     return $user;
 }

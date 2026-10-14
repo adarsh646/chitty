@@ -20,13 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['installment_id'])) {
     $paid_date = ($_POST['paid_date'] ?? '') ?: null;
     try {
         record_payment($installment_id, $amount_paid, $paid_date);
-        header('Location: /admin/month.php?id=' . $id . '&month=' . $month_number . '&payment_recorded=1');
-        exit;
+        redirect_masked('/admin/month.php?id=' . $id . '&month=' . $month_number . '&payment_recorded=1');
     } catch (RuntimeException $e) {
         $paymentError = $e->getMessage();
     }
 }
 
+ensure_month_dues_generated($id, $month_number);
 $auction = get_auction_for_month($id, $month_number);
 $installments = get_installments($id, $month_number);
 
@@ -36,9 +36,15 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="page-head">
     <div>
       <h1><?= h($scheme['name']) ?> — Month <?= $month_number ?> dues</h1>
-      <?php if ($auction): ?><div class="sub">Net installment: ₹<?= money($auction['net_installment']) ?> per Chittal N0.</div><?php endif; ?>
+      <?php if ($auction): ?>
+        <div class="sub">Net installment: ₹<?= money($auction['net_installment']) ?> per Chittal N0.</div>
+      <?php else: ?>
+        <div class="sub">Monthly subscription: ₹<?= money($scheme['monthly_subscription']) ?> per Chittal N0. · Dues collection before auction</div>
+      <?php endif; ?>
     </div>
-    <a class="btn secondary" href="/admin/auction.php?id=<?= $id ?>&month=<?= $month_number ?>">Edit auction</a>
+    <a class="btn secondary" href="/admin/auction.php?id=<?= $id ?>&month=<?= $month_number ?>">
+      <?= $auction ? 'Edit auction' : 'Go to Auction' ?>
+    </a>
   </div>
 
   <?php if (isset($_GET['payment_recorded'])): ?>
@@ -47,34 +53,60 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="error-msg"><?= h($paymentError) ?></div>
   <?php endif; ?>
 
-  <?php if (!$auction): ?>
-    <div class="empty">No auction has been recorded for this month yet. <a href="/admin/auction.php?id=<?= $id ?>&month=<?= $month_number ?>">Enter it first</a> to generate dues.</div>
-  <?php elseif (empty($installments)): ?>
-    <div class="empty">No installments generated. Save the auction form again to generate them.</div>
+  <?php if (empty($installments)): ?>
+    <div class="empty">No installments generated for Month <?= $month_number ?> yet. <a href="/admin/auction.php?id=<?= $id ?>&month=<?= $month_number ?>">View auction</a> to generate dues.</div>
   <?php else: ?>
     <table class="responsive-card-table admin-month-table">
       <thead>
-        <tr><th class="num">Chittal N0.</th><th>Member</th><th class="num">Due balance</th><th class="num">Paid</th><th>Status</th><th>Record payment</th></tr>
+        <tr><th class="num">Chittal N0.</th><th>Member</th><th class="num">Due balance</th><th class="num">Excess amount</th><th class="num">Paid</th><th>Status</th><th>Record payment</th></tr>
       </thead>
       <tbody>
         <?php foreach ($installments as $i): ?>
+          <?php
+            $excessAmount = (float)($i['excess_balance'] ?? ($i['excess_amount'] ?? 0));
+            $remDue = remaining_amount_due($i);
+          ?>
           <tr>
             <td class="num font-mono" data-label="Chittal N0.">#<?= (int)$i['ticket_number'] ?></td>
-            <td data-label="Member"><?= h($i['member_name']) ?></td>
-            <td class="num font-mono" data-label="Due balance">₹<?= money(remaining_amount_due($i)) ?></td>
+            <td data-label="Member">
+              <strong><?= h($i['member_name']) ?></strong>
+              <?php if (!empty($i['pending_payment_id'])): ?>
+                <div class="sub font-mono" style="font-size:0.75rem; color: #B45309;">
+                  UPI Txn: <?= h($i['pending_txn']) ?>
+                </div>
+              <?php endif; ?>
+            </td>
+            <td class="num font-mono" data-label="Due balance">₹<?= money($remDue) ?></td>
+            <td class="num font-mono" data-label="Excess amount" style="<?= $excessAmount > 0 ? 'color: var(--good); font-weight: 600;' : 'color: var(--ink-soft);' ?>">
+              ₹<?= money($excessAmount) ?>
+            </td>
             <td class="num font-mono" data-label="Paid">₹<?= money($i['amount_paid']) ?></td>
-            <td data-label="Status"><span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span></td>
-            <td data-label="Record payment">
-              <?php if ($i['status'] !== 'paid'): ?>
-                <form class="inline" method="POST" action="/admin/month.php?id=<?= $id ?>&month=<?= $month_number ?>">
-                  <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-                  <input type="hidden" name="installment_id" value="<?= (int)$i['id'] ?>">
-                  <input type="number" step="0.01" min="0.01" max="<?= h(remaining_amount_due($i)) ?>" name="amount_paid" placeholder="₹" style="width:90px" inputmode="decimal" required>
-                  <input type="date" name="paid_date" style="width:140px">
-                  <button class="small" type="submit">Record</button>
-                </form>
+            <td data-label="Status">
+              <?php if ($i['status'] === 'deducted_from_excess' || !empty($i['is_deducted_from_excess'])): ?>
+                <span class="badge deducted_from_excess" title="Installment fully covered and deducted from excess amount">installment deducted from excess amount</span>
+              <?php elseif (!empty($i['pending_payment_id'])): ?>
+                <span class="badge processing" style="background: #FFF4DE; color: #B45309; border: 1px solid #FDE68A;">UPI Under Verification</span>
               <?php else: ?>
-                <span class="section-note" style="margin:0">Paid on <?= h($i['paid_date']) ?></span>
+                <span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span>
+              <?php endif; ?>
+            </td>
+            <td data-label="Record payment">
+              <?php if ($i['status'] !== 'paid' && $i['status'] !== 'deducted_from_excess'): ?>
+                <?php if (!empty($i['pending_payment_id'])): ?>
+                  <a class="btn small success" href="/admin/notifications.php" style="padding: 4px 10px; font-size: 0.8rem;">Verify in Notifications &rarr;</a>
+                <?php else: ?>
+                  <form class="inline" method="POST" action="/admin/month.php?id=<?= $id ?>&month=<?= $month_number ?>">
+                    <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                    <input type="hidden" name="installment_id" value="<?= (int)$i['id'] ?>">
+                    <input type="number" step="0.01" min="0.01" name="amount_paid" placeholder="₹" style="width:100px" inputmode="decimal" required>
+                    <input type="date" name="paid_date" style="width:140px">
+                    <button class="small" type="submit">Record</button>
+                  </form>
+                <?php endif; ?>
+              <?php else: ?>
+                <span class="section-note" style="margin:0">
+                  <?= ($i['status'] === 'deducted_from_excess' || !empty($i['is_deducted_from_excess'])) ? 'Deducted from excess' : ('Paid on ' . h($i['paid_date'])) ?>
+                </span>
               <?php endif; ?>
             </td>
           </tr>

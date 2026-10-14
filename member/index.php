@@ -5,6 +5,9 @@ require_once __DIR__ . '/../includes/upi.php';
 $user = require_member();
 
 $schemes = schemes_for_user($user['id']);
+foreach ($schemes as $s) {
+    generate_first_month_dues_if_full((int)$s['id']);
+}
 $totalDue = get_user_total_due($user['id']);
 
 $stmtPending = db()->prepare('

@@ -8,9 +8,9 @@ if (isset($_GET['download_sample'])) {
     header('Content-Disposition: attachment; filename="members_bulk_upload_sample.csv"');
     $out = fopen('php://output', 'w');
     fputcsv($out, ['Full name', 'Phone', 'Temporary password', 'Email', 'Address']);
-    fputcsv($out, ['John Doe', '9876543210', 'Pass@1234', 'john@example.com', '123 MG Road, Kochi']);
-    fputcsv($out, ['Jane Smith', '9876543211', 'Pass@5678', 'jane@example.com', 'Flat 4B, Baker Hill']);
-    fputcsv($out, ['Robert Paul', '9876543212', 'Pass@9999', '', '']);
+    fputcsv($out, ['Aranind', '9876543210', 'Pass@1234', 'john@example.com', '123 MG Road, Kochi']);
+    fputcsv($out, ['shruthi', '9876543211', 'Pass@5678', 'jane@example.com', 'Flat 4B, Baker Hill']);
+    fputcsv($out, ['spiderman', '9876543212', 'Pass@9999', '', '']);
     fclose($out);
     exit;
 }
@@ -29,8 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_member'])) {
     }
 
     $result = delete_member((int) ($_POST['member_id'] ?? 0));
-    header('Location: /admin/members.php?delete=' . urlencode($result));
-    exit;
+    redirect_masked('/admin/members.php?delete=' . urlencode($result));
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_member'])) {
     if (!valid_csrf_token($_POST['csrf_token'] ?? null)) {
         http_response_code(403);
@@ -65,8 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_member'])) {
                 $editAddress,
                 $editPassword !== '' ? $editPassword : null
             );
-            header('Location: /admin/members.php?updated=1');
-            exit;
+            redirect_masked('/admin/members.php?updated=1');
         }
     }
 
@@ -218,8 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_member'])) {
                                 create_user($vm['name'], $vm['phone'], $vm['email'], $vm['address'], $vm['password'], 'member');
                             }
                             $pdo->commit();
-                            header('Location: /admin/members.php?bulk_added=' . count($validMembers));
-                            exit;
+                            redirect_masked('/admin/members.php?bulk_added=' . count($validMembers));
                         } catch (Throwable $e) {
                             if ($pdo->inTransaction()) {
                                 $pdo->rollBack();
@@ -253,8 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_member'])) {
         $error = 'A user with that phone number already exists.';
     } else {
         create_user($name, $phone, $email, $address, $password, 'member');
-        header('Location: /admin/members.php?added=1');
-        exit;
+        redirect_masked('/admin/members.php?added=1');
     }
 }
 
@@ -446,7 +442,7 @@ require_once __DIR__ . '/../includes/header.php';
 
         <div class="field">
           <label for="single_name">Full name <span style="color:var(--bad)">*</span></label>
-          <input type="text" id="single_name" name="name" value="<?= h($form['name'] ?? '') ?>" required placeholder="e.g. Rahul Sharma">
+          <input type="text" id="single_name" name="name" value="<?= h($form['name'] ?? '') ?>" required placeholder=" ">
         </div>
 
         <div class="field-row">

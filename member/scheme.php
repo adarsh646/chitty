@@ -11,6 +11,8 @@ $id = (int) ($_GET['id'] ?? 0);
 $scheme = get_scheme($id);
 if (!$scheme) { http_response_code(404); render_error('Scheme not found.'); exit; }
 
+ensure_month_dues_generated($id, 1);
+
 $mySubs = get_subscriptions_for_user_in_scheme($id, $user['id']);
 if (empty($mySubs)) { http_response_code(403); render_error("You are not enrolled in this chitty."); exit; }
 
@@ -42,24 +44,35 @@ require_once __DIR__ . '/../includes/header.php';
   <?php endif; ?>
 
   <?php foreach ($ledgers as $entry): $sub = $entry['sub']; $ledger = $entry['ledger']; ?>
-    <h2>Chittal N0. #<?= (int)$sub['ticket_number'] ?><?= $sub['has_won'] ? ' — won in month ' . (int)$sub['won_month'] : '' ?></h2>
+    <h2>
+      Chittal N0. #<?= (int)$sub['ticket_number'] ?><?= $sub['has_won'] ? ' — won in month ' . (int)$sub['won_month'] : '' ?>
+      <?php if ((float)($sub['excess_balance'] ?? 0) > 0.005): ?>
+        <span class="badge deducted_from_excess" style="font-size: 0.82rem; margin-left: 8px; vertical-align: middle;">
+          Available Excess Balance: ₹<?= money($sub['excess_balance']) ?>
+        </span>
+      <?php endif; ?>
+    </h2>
     <?php if (empty($ledger)): ?>
       <p class="empty">No dues have been generated for this Chittal N0. yet.</p>
     <?php else: ?>
       <div class="history-table-region">
         <div class="history-table-scroll" tabindex="0" role="region" aria-label="Chittal N0. #<?= (int)$sub['ticket_number'] ?> payment history">
           <table class="responsive-card-table ledger-table">
-            <thead><tr><th class="num">Month</th><th class="num">Due balance</th><th class="num">Paid</th><th>Status</th><th>Paid on</th></tr></thead>
+            <thead><tr><th class="num">Month</th><th class="num">Due balance</th><th class="num">Excess amount</th><th class="num">Paid</th><th>Status</th><th>Paid on</th></tr></thead>
             <tbody>
               <?php foreach ($ledger as $i): ?>
                 <?php
                   $isPendingVerification = isset($pendingPayments[$i['id']]);
                   $pendingInfo = $isPendingVerification ? $pendingPayments[$i['id']] : null;
+                  $isDeductedFromExcess = ($i['status'] === 'deducted_from_excess' || !empty($i['is_deducted_from_excess']));
                 ?>
                 <tr>
                   <td class="num" data-label="Month">#<?= (int)$i['month_number'] ?></td>
                   <td class="num font-mono" data-label="Due balance">₹<?= money(remaining_amount_due($i)) ?></td>
-                  <td class="num font-mono" data-label="Amount paid">₹<?= money($i['amount_paid']) ?></td>
+                  <td class="num font-mono" data-label="Excess amount" style="<?= ($i['excess_amount'] ?? 0) > 0 ? 'color: var(--good); font-weight: 600;' : 'color: var(--ink-soft);' ?>">
+                    ₹<?= money($i['excess_amount'] ?? 0) ?>
+                  </td>
+                  <td class="num font-mono" data-label="Paid">₹<?= money($i['amount_paid']) ?></td>
                   <td data-label="Status & Action">
                     <div class="status-cell-wrap">
                       <?php if ($isPendingVerification): ?>
@@ -68,6 +81,8 @@ require_once __DIR__ . '/../includes/header.php';
                           <span class="pulse-dot"></span>
                           <span>Txn: <?= h($pendingInfo['transaction_id']) ?></span>
                         </div>
+                      <?php elseif ($isDeductedFromExcess): ?>
+                        <span class="badge deducted_from_excess" title="Installment fully covered and deducted from excess amount">installment deducted from excess amount</span>
                       <?php else: ?>
                         <span class="badge <?= h($i['status']) ?>"><?= h($i['status']) ?></span>
                         <?php if (($i['status'] === 'pending' || $i['status'] === 'partial') && remaining_amount_due($i) > 0): ?>
@@ -176,6 +191,9 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="input-with-prefix">
               <span class="prefix">₹</span>
               <input type="number" id="payAmount" step="0.01" min="1.00" inputmode="decimal" placeholder="0.00" required>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--ink-soft); margin-top: 5px;">
+              Pay exact due or any higher amount. Excess payment will automatically be deducted from your next month's installment due.
             </div>
             <div class="quick-amount-buttons" style="margin-top: 6px;">
               <button type="button" class="btn secondary small" id="payFullBtn">Pay Full Due</button>
@@ -398,7 +416,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     async function loadUpiQr() {
       const amount = parseFloat(payAmount.value);
-      if (isNaN(amount) || amount < 1.00 || amount > currentDue + 0.005) {
+      if (isNaN(amount) || amount < 1.00) {
         return;
       }
 
@@ -406,7 +424,7 @@ require_once __DIR__ . '/../includes/header.php';
       qrLoadingSpinner.style.display = 'inline-block';
 
       try {
-        const res = await fetch('/member/payment-upi-init.php', {
+        const res = await fetch('<?= mask_url('/member/payment-upi-init.php') ?>', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -462,7 +480,7 @@ require_once __DIR__ . '/../includes/header.php';
       modalDue.textContent = formatRupee(currentDue);
 
       payAmount.value = currentDue.toFixed(2);
-      payAmount.max = currentDue.toFixed(2);
+      payAmount.removeAttribute('max');
       upiTxnIdInput.value = '';
 
       switchStep(1);
@@ -537,11 +555,6 @@ require_once __DIR__ . '/../includes/header.php';
         return;
       }
 
-      if (enteredAmount > currentDue + 0.005) {
-        showError('Payment amount cannot exceed the remaining due balance of ' + formatRupee(currentDue) + '.');
-        return;
-      }
-
       if (!txnId || txnId.length < 4) {
         showError('Please enter a valid UPI Transaction ID / UTR number from Google Pay (at least 4 characters).');
         upiTxnIdInput.focus();
@@ -554,7 +567,7 @@ require_once __DIR__ . '/../includes/header.php';
       submitProofSpinner.style.display = 'inline-block';
 
       try {
-        const res = await fetch('/member/payment-submit-upi.php', {
+        const res = await fetch('<?= mask_url('/member/payment-submit-upi.php') ?>', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -3,5 +3,5 @@ require_once __DIR__ . '/includes/auth.php';
 start_app_session();
 $_SESSION = [];
 session_destroy();
-header('Location: /login.php');
+redirect_masked('/login.php');
 exit;

@@ -71,9 +71,6 @@ try {
     if ($amount < 1.00) {
         throw new RuntimeException('Payment amount must be at least ₹1.00.');
     }
-    if ($amount > $remaining + 0.005) {
-        throw new RuntimeException('Payment amount cannot exceed the due balance of ₹' . number_format($remaining, 2) . '.');
-    }
 
     $upiConfig = get_upi_config();
     $note = substr("Chitty M#{$inst['month_number']} T#{$inst['ticket_number']} - {$user['name']}", 0, 45);
